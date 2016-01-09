@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup>
+    <PostBuildEvent>
+      <Command>xcopy /y /d  "$(ProjectDir)shaders\*.frag" "$(OutDir)shaders"
+xcopy /y /d "$(SolutionDir)ext\dll\*.dll" "$(OutDir)"
+xcopy /y /d  "$(ProjectDir)shaders\*.vs" "$(OutDir)shaders"
+if exist "$(ProjectDir)textures\" xcopy /y /d  "$(ProjectDir)textures\*.jpg" "$(OutDir)textures"
+if exist "$(ProjectDir)textures\" xcopy /y /d  "$(ProjectDir)textures\*.png" "$(OutDir)textures"
+if exist "$(ProjectDir)models\" xcopy /y /d "$(ProjectDir)models\*.obj" "$(OutDir)models"
+if exist "$(ProjectDir)models\" xcopy /y /d "$(ProjectDir)models\*.mtl" "$(OutDir)models"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup>
+    <PostBuildEvent>
+      <Message>Copy resources</Message>
+    </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>if not exist "$(OutDir)shaders" mkdir "$(OutDir)shaders" 
+if not exist "$(OutDir)textures" mkdir "$(OutDir)textures"
+if not exist "$(OutDir)models" mkdir "$(OutDir)models"</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Create directories</Message>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup />
+</Project>
