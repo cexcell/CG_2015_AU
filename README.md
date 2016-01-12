@@ -1,6 +1,8 @@
 # CG_2015_AU
 Computer Graphics 2015 SpbAU ( OpenGL )
 
+To build it via 2013 or 2015 visual studio you should declare platform toolset for each project in Properties->General and then open commons.props and change additional library dir to vc120 or vc140 for vs2013 and vs2015 respectively.
+
 ## Task 1 - Fractal
 Visualize Mandelbrot set and map 1D texture on it.
 Iterations number and r^2 can be controlled from two sliders
