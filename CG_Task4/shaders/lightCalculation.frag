@@ -37,6 +37,8 @@ uniform PointLight pointLights[maxLights];
 uniform vec3 viewPos;
 uniform int mode;
 
+out vec4 FragColor;
+
 vec3 calculateDirectionalLight(DirLight light, vec3 normal, vec3 viewDir, vec3 Diffuse, float Specular)
 {
 	vec3 lightDir = normalize(-light.direction);
@@ -82,13 +84,13 @@ void main()
 	vec3 viewDir = normalize(viewPos - FragPos);
 
 	if (mode == 1)
-		gl_FragColor = vec4(FragPos, 1.0f);
+		FragColor = vec4(FragPos, 1.0f);
 	if (mode == 2)
-		gl_FragColor = vec4(Normal, 1.0f);
+		FragColor = vec4(Normal, 1.0f);
 	if (mode == 3)
-		gl_FragColor = vec4(Diffuse, 1.0f);
+		FragColor = vec4(Diffuse, 1.0f);
 	if (mode == 4)
-		gl_FragColor = vec4(Specular, Specular, Specular, 1.0f);
+		FragColor = vec4(Specular, Specular, Specular, 1.0f);
 	if (mode == 5)
 	{
 		vec3 color;
@@ -96,6 +98,6 @@ void main()
 		color = calculateDirectionalLight(dirLight, norm, viewDir, Diffuse, Specular);
 		for(int i = 0; i < lightsN; i++)
 			color += calculatePointLight(pointLights[i], norm, FragPos, viewDir, Diffuse, Specular);    
-		gl_FragColor = vec4(color, 1.0f);
+		FragColor = vec4(color, 1.0f);
 	}
 }
