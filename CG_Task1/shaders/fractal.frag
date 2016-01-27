@@ -33,7 +33,7 @@ void main()
 	    frag_color = vec4(0.0, 0.0, 0.0, 1.0);
 	}
 	else {
-	    frag_color = texture(myTexture, iters / max_iters).rbga;
+	    frag_color = texture(myTexture, iters / max_iters).rgba;
 	}
 
 	gl_FragColor = frag_color;

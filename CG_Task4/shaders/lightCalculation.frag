@@ -30,10 +30,12 @@ struct PointLight
     vec3 specular;
 };  
 
-const int lightsN = 4;
-uniform PointLight pointLights[lightsN];
+const int maxLights = 256;
+uniform int lightsN;
+uniform PointLight pointLights[maxLights];
 
 uniform vec3 viewPos;
+uniform int mode;
 
 vec3 calculateDirectionalLight(DirLight light, vec3 normal, vec3 viewDir, vec3 Diffuse, float Specular)
 {
@@ -55,14 +57,15 @@ vec3 calculatePointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewD
     
 	float diff = max(dot(normal, lightDir), 0.0);
     vec3 reflectDir = reflect(-lightDir, normal);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16.0f);
+
+	vec3 halfwayDir = normalize(lightDir + viewDir);  
+    float spec = pow(max(dot(normal, halfwayDir), 0.0), 16.0);
     float distance    = length(light.position - fragPos);
     float attenuation = 1.0f / (light.constant + light.linear * distance + light.quadratic * (distance * distance));    
     
-	vec3 ambient  = light.ambient  * Diffuse, TexCoords;
+	vec3 ambient  = light.ambient  * Diffuse;
     vec3 diffuse  = light.diffuse  * diff * Diffuse;
     vec3 specular = light.specular * spec * Specular;
-    ambient  *= attenuation;
     diffuse  *= attenuation;
     specular *= attenuation;
     return (ambient + diffuse + specular);
@@ -78,11 +81,21 @@ void main()
 	vec3 norm = normalize(Normal);
 	vec3 viewDir = normalize(viewPos - FragPos);
 
-	vec3 color;
-
-	color = calculateDirectionalLight(dirLight, norm, viewDir, Diffuse, Specular);
-	for(int i = 0; i < lightsN; i++)
-		color += calculatePointLight(pointLights[i], norm, FragPos, viewDir, Diffuse, Specular);    
-
-	gl_FragColor = vec4(color, 1.0f);
+	if (mode == 1)
+		gl_FragColor = vec4(FragPos, 1.0f);
+	if (mode == 2)
+		gl_FragColor = vec4(Normal, 1.0f);
+	if (mode == 3)
+		gl_FragColor = vec4(Diffuse, 1.0f);
+	if (mode == 4)
+		gl_FragColor = vec4(Specular, Specular, Specular, 1.0f);
+	if (mode == 5)
+	{
+		vec3 color;
+		
+		color = calculateDirectionalLight(dirLight, norm, viewDir, Diffuse, Specular);
+		for(int i = 0; i < lightsN; i++)
+			color += calculatePointLight(pointLights[i], norm, FragPos, viewDir, Diffuse, Specular);    
+		gl_FragColor = vec4(color, 1.0f);
+	}
 }

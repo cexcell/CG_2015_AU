@@ -86,6 +86,8 @@
     <None Include="shaders\bufferShader.vs" />
     <None Include="shaders\lightCalculation.frag" />
     <None Include="shaders\lightCalculation.vs" />
+    <None Include="shaders\sphereDraw.frag" />
+    <None Include="shaders\sphereDraw.vs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
