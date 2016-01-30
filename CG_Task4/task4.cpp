@@ -18,7 +18,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void Do_Movement();
 
-Camera camera(glm::vec3(0.0f, 40.0f, 80.0f));
+Camera camera(glm::vec3(0.0f, 20.0f, 40.0f));
 bool keys[1024];
 bool firstMouse = true;
 GLfloat lastX = screenWidth / 2, lastY = screenHeight / 2;
@@ -26,11 +26,14 @@ GLfloat lastX = screenWidth / 2, lastY = screenHeight / 2;
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
 
-bool drawAsWireframe = false;
+//bool drawAsWireframe = false;
 int drawMode = 5;
 GLfloat speed = 10;
-const double radius = 9;
-const double offset = 15;
+const double radius = 10;
+const double offset = 16;
+bool drawAsWireframe = false;
+bool enableGamma = false;
+bool drawSpheres = true;
 
 GLuint vao, vbo;
 
@@ -80,7 +83,7 @@ glm::vec3 get_random_ambient()
 double random_diffuse_specular()
 {
 	int rand1 = rand();
-	return (rand1 % 100 + 50) * 0.0066;
+	return (rand1 % 100 + 100) * 0.005;
 }
 
 glm::vec3 get_random_color()
@@ -102,6 +105,13 @@ void setLightsPosition(vector<glm::vec3>& pointLightsPositions, double step)
 			radius * sin(theta));
 		angle += angleStep;
 	}
+}
+
+void drawQuad()
+{
+	glBindVertexArray(vao);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glBindVertexArray(0);
 }
 
 int main()
@@ -127,16 +137,21 @@ int main()
 	glViewport(0, 0, screenWidth, screenHeight);
 
 	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
 
 	Shader bufferShader("shaders/bufferShader.vs", "shaders/bufferShader.frag");
-	Shader lightShader("shaders/lightCalculation.vs", "shaders/lightCalculation.frag");
+	Shader directLightShader("shaders/directLight.vs", "shaders/directLight.frag");
+	Shader pointLightShader("shaders/pointLight.vs", "shaders/pointLight.frag");
+	Shader resultShader("shaders/textureDraw.vs", "shaders/textureDraw.frag");
 	Shader sphereShader("shaders/sphereDraw.vs", "shaders/sphereDraw.frag");
 
-	lightShader.Use();
+	glUniform1i(glGetUniformLocation(directLightShader.Program, "gPosition"), 0);
+	glUniform1i(glGetUniformLocation(directLightShader.Program, "gNormal"), 1);
+	glUniform1i(glGetUniformLocation(directLightShader.Program, "gAlbedoSpec"), 2);
 
-	glUniform1i(glGetUniformLocation(bufferShader.Program, "gPosition"), 0);
-	glUniform1i(glGetUniformLocation(bufferShader.Program, "gNormal"), 1);
-	glUniform1i(glGetUniformLocation(bufferShader.Program, "gAlbedoSpec"), 2);
+	glUniform1i(glGetUniformLocation(pointLightShader.Program, "gPosition"), 0);
+	glUniform1i(glGetUniformLocation(pointLightShader.Program, "gNormal"), 1);
+	glUniform1i(glGetUniformLocation(pointLightShader.Program, "gAlbedoSpec"), 2);
 
 	bufferShader.Use();
 
@@ -148,9 +163,9 @@ int main()
 #pragma region light sources setup
 
 	glm::vec3 dirLightDirection(-0.2f, -1.0f, -0.3f);
-	glm::vec3 dirLightAmbient = glm::vec3(0.05f, 0.05f, 0.05f);
-	glm::vec3 dirLightDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
-	glm::vec3 dirLightSpecular = glm::vec3(0.5f, 0.5f, 0.5f);
+	glm::vec3 dirLightAmbient = glm::vec3(0.01f, 0.01f, 0.01f);
+	glm::vec3 dirLightDiffuse = glm::vec3(0.1f, 0.1f, 0.1f);
+	glm::vec3 dirLightSpecular = glm::vec3(0.1f, 0.1f, 0.1f);
 
 	size_t lightsNumber = 10; //set number of light sources
 
@@ -176,6 +191,7 @@ int main()
 #pragma endregion 
 
 #pragma region set gBuffer
+
 	GLuint gBuffer, gPosition, gNormal, gAlbedoSpec, rboDepth;
 
 	glGenFramebuffers(1, &gBuffer);
@@ -204,6 +220,32 @@ int main()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 #pragma endregion 
+
+#pragma region set output texture for light calculation
+
+	GLuint lightBuffer, lightDepth, lightColor;
+	glGenFramebuffers(1, &lightBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, lightBuffer);
+
+	createGBufTex(lightColor, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE);
+
+	glGenRenderbuffers(1, &lightDepth);
+	glBindRenderbuffer(GL_RENDERBUFFER, lightDepth);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, screenWidth, screenHeight);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, lightDepth);
+
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, lightColor, 0);
+
+	GLuint attachments2[] = { GL_COLOR_ATTACHMENT0 };
+	glDrawBuffers(1, attachments2);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "Framebuffer for lighting not complete!" << std::endl;
+	else
+		std::cout << "Framebuffer for lighting complete" << std::endl;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+#pragma endregion
 
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
@@ -237,16 +279,17 @@ int main()
 
 		ourModel.Draw(bufferShader);
 
-#pragma endregion 
-
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-#pragma region draw with light sources
+#pragma endregion 
 
+		glBindFramebuffer(GL_FRAMEBUFFER, lightBuffer);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		lightShader.Use();
+#pragma region directional light calculation
+
+		directLightShader.Use();
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, gPosition);
@@ -255,47 +298,45 @@ int main()
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
 
+		glUniform3fv(glGetUniformLocation(directLightShader.Program, "dirLight.direction"), 1, glm::value_ptr(dirLightDirection));
+		glUniform3fv(glGetUniformLocation(directLightShader.Program, "dirLight.ambient"), 1, glm::value_ptr(dirLightAmbient));
+		glUniform3fv(glGetUniformLocation(directLightShader.Program, "dirLight.diffuse"), 1, glm::value_ptr(dirLightDiffuse));
+		glUniform3fv(glGetUniformLocation(directLightShader.Program, "dirLight.specular"), 1, glm::value_ptr(dirLightSpecular));
+
+		glUniform3fv(glGetUniformLocation(directLightShader.Program, "viewPos"), 1, glm::value_ptr(camera.Position));
+
+//		drawQuad();
+
+#pragma endregion 
+
+#pragma region calculate point lights
+
 		setLightsPosition(pointLightsPositions, step);
+		pointLightShader.Use();
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, gPosition);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, gNormal);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+
+		glUniformMatrix4fv(glGetUniformLocation(pointLightShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(glGetUniformLocation(pointLightShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+		glUniform2f(glGetUniformLocation(pointLightShader.Program, "screenSize"), screenWidth, screenHeight);
+
 		for (GLuint i = 0; i < pointLightsPositions.size(); i++)
 		{
-			glUniform3fv(glGetUniformLocation(lightShader.Program, ("pointLights[" + std::to_string(i) + "].position").c_str()), 1, &pointLightsPositions[i][0]);
+			glUniform3fv(glGetUniformLocation(pointLightShader.Program, "pointLight.position"), 1, &pointLightsPositions[i][0]);
 
-			glUniform3fv(glGetUniformLocation(lightShader.Program, ("pointLights[" + std::to_string(i) + "].ambient").c_str()), 1, &pointLightsAmbients[i][0]);
-			glUniform3fv(glGetUniformLocation(lightShader.Program, ("pointLights[" + std::to_string(i) + "].diffuse").c_str()), 1, &pointLightsDiffuses[i][0]);
-			glUniform3fv(glGetUniformLocation(lightShader.Program, ("pointLights[" + std::to_string(i) + "].specular").c_str()), 1, &pointLightsSpeculars[i][0]);
+			glUniform3fv(glGetUniformLocation(pointLightShader.Program, "pointLight.ambient"), 1, &pointLightsAmbients[i][0]);
+			glUniform3fv(glGetUniformLocation(pointLightShader.Program, "pointLight.diffuse"), 1, &pointLightsDiffuses[i][0]);
+			glUniform3fv(glGetUniformLocation(pointLightShader.Program, "pointLight.specular"), 1, &pointLightsSpeculars[i][0]);
 
-			glUniform1f(glGetUniformLocation(lightShader.Program, ("pointLights[" + std::to_string(i) + "].constant").c_str()), pointLightsConstant[i]);
-			glUniform1f(glGetUniformLocation(lightShader.Program, ("pointLights[" + std::to_string(i) + "].linear").c_str()), pointLightsLinear[i]);
-			glUniform1f(glGetUniformLocation(lightShader.Program, ("pointLights[" + std::to_string(i) + "].quadratic").c_str()), pointLightsQuadratic[i]);
-		}
+			glUniform1f(glGetUniformLocation(pointLightShader.Program, "pointLight.constant"), pointLightsConstant[i]);
+			glUniform1f(glGetUniformLocation(pointLightShader.Program, "pointLight.linear"), pointLightsLinear[i]);
+			glUniform1f(glGetUniformLocation(pointLightShader.Program, "pointLight.quadratic"), pointLightsQuadratic[i]);
 
-		glUniform3fv(glGetUniformLocation(lightShader.Program, "dirLight.direction"), 1, glm::value_ptr(dirLightDirection));
-		glUniform3fv(glGetUniformLocation(lightShader.Program, "dirLight.ambient"), 1, glm::value_ptr(dirLightAmbient));
-		glUniform3fv(glGetUniformLocation(lightShader.Program, "dirLight.diffuse"), 1, glm::value_ptr(dirLightDiffuse));
-		glUniform3fv(glGetUniformLocation(lightShader.Program, "dirLight.specular"), 1, glm::value_ptr(dirLightSpecular));
-		
-		glUniform1i(glGetUniformLocation(lightShader.Program, "lightsN"), lightsNumber);
-		glUniform3fv(glGetUniformLocation(lightShader.Program, "viewPos"), 1, glm::value_ptr(camera.Position));
-		glUniform1i(glGetUniformLocation(lightShader.Program, "mode"), drawMode);
-	
-		glBindVertexArray(vao);
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, lightsNumber);
-		glBindVertexArray(0);
-
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-		glBlitFramebuffer(0, 0, screenWidth, screenHeight, 0, 0, screenWidth, screenHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-#pragma endregion
-
-#pragma region draw spheres
-
-		sphereShader.Use();
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-		for (auto i = 0; i < lightsNumber; ++i)
-		{
 			const GLfloat lightThreshold = 5.0;
 			const GLfloat maxBrightness = fmaxf(fmaxf(pointLightsDiffuses[i].r, pointLightsDiffuses[i].g), pointLightsDiffuses[i].b);
 			float linear = pointLightsLinear[i];
@@ -306,11 +347,66 @@ int main()
 			model = translate(model, pointLightsPositions[i]);
 			model = scale(model, glm::vec3(radius));
 
-			glUniformMatrix4fv(glGetUniformLocation(sphereShader.Program, "mvp"), 1, GL_FALSE, value_ptr(projection * view * model));
-			glUniform3fv(glGetUniformLocation(sphereShader.Program, "sphereColor"), 1, &pointLightsDiffuses[i][0]);
-
-			sphereModel.Draw(sphereShader);
+			glUniformMatrix4fv(glGetUniformLocation(pointLightShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+			sphereModel.Draw(pointLightShader);
 		}
+
+#pragma endregion
+
+#pragma region draw result
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		resultShader.Use();
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, gPosition);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, gNormal);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, lightColor);
+
+		glUniform1i(glGetUniformLocation(resultShader.Program, "mode"), drawMode);
+		glUniform1i(glGetUniformLocation(resultShader.Program, "enableGamma"), enableGamma);
+	
+		drawQuad();
+
+
+#pragma endregion
+
+#pragma region draw spheres
+		if (drawSpheres)
+		{
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+			glBlitFramebuffer(0, 0, screenWidth, screenHeight, 0, 0, screenWidth, screenHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+			sphereShader.Use();
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+			for (auto i = 0; i < lightsNumber; ++i)
+			{
+				const GLfloat lightThreshold = 5.0;
+				const GLfloat maxBrightness = fmaxf(fmaxf(pointLightsDiffuses[i].r, pointLightsDiffuses[i].g), pointLightsDiffuses[i].b);
+				float linear = pointLightsLinear[i];
+				float quadratic = pointLightsQuadratic[i];
+				float constant = pointLightsConstant[i];
+				GLfloat radius = (-linear + static_cast<float>(sqrt(linear * linear - 4 * quadratic * (constant - (256.0 / lightThreshold) * maxBrightness)))) / (2 * quadratic);
+				model = glm::mat4();
+				model = translate(model, pointLightsPositions[i]);
+				model = scale(model, glm::vec3(radius));
+
+				glUniformMatrix4fv(glGetUniformLocation(sphereShader.Program, "mvp"), 1, GL_FALSE, value_ptr(projection * view * model));
+				glUniform3fv(glGetUniformLocation(sphereShader.Program, "sphereColor"), 1, &pointLightsDiffuses[i][0]);
+
+				sphereModel.Draw(sphereShader);
+			}
+		}
+
 #pragma endregion 
 
 		glfwSwapBuffers(window);
@@ -339,6 +435,12 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	
 	if (key == GLFW_KEY_V && action == GLFW_PRESS)
 		drawAsWireframe = !drawAsWireframe;
+
+	if (key == GLFW_KEY_G && action == GLFW_PRESS)
+		enableGamma = !enableGamma;
+
+	if (key == GLFW_KEY_P && action == GLFW_PRESS)
+		drawSpheres = !drawSpheres;
 
 	if (key == GLFW_KEY_1 && action == GLFW_PRESS)
 		drawMode = 1;

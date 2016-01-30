@@ -84,10 +84,16 @@
   <ItemGroup>
     <None Include="shaders\bufferShader.frag" />
     <None Include="shaders\bufferShader.vs" />
-    <None Include="shaders\lightCalculation.frag" />
-    <None Include="shaders\lightCalculation.vs" />
+    <None Include="shaders\directLight.frag" />
+    <None Include="shaders\directLight.vs" />
+    <None Include="shaders\pointLight.frag" />
+    <None Include="shaders\pointLight.vs" />
     <None Include="shaders\sphereDraw.frag" />
     <None Include="shaders\sphereDraw.vs" />
+    <None Include="shaders\textureDraw.frag" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="shaders\textureDraw.vs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
