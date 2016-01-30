@@ -30,3 +30,4 @@ Draw nanosuit soldier from crysis using deferred shading. Supports directional a
 * Camera controls - WASD + mouse
 * Draw wireframes - V
 * To switch between attachments(position, normal, diffuse, specular, final render) use keys 1, 2, 3, 4, 5 respectively.
+* Use P to switch point light volumes rendering on/off.
