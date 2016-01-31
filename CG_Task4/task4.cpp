@@ -287,7 +287,8 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 #pragma region directional light calculation
-		
+
+		glDepthMask(false);
 		glEnable(GL_BLEND);
 		glBlendEquation(GL_FUNC_ADD);
 		glBlendFunc(GL_ONE, GL_ONE);
@@ -358,6 +359,7 @@ int main()
 
 #pragma region draw result
 		
+		glDepthMask(true);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glDisable(GL_BLEND);
 
