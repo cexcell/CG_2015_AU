@@ -55,8 +55,7 @@ void main()
 	vec3 norm = normalize(Normal);
 	vec3 viewDir = normalize(viewPos - FragPos);
 
-	//vec3 color = pointLight.diffuse;
 	vec3 color = calculatePointLight(pointLight, norm, FragPos, viewDir, Diffuse, Specular);
 
-	lightColor += vec4(color, 1.0);
+	lightColor = vec4(color, 1.0);
 }

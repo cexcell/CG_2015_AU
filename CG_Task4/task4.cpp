@@ -137,7 +137,6 @@ int main()
 	glViewport(0, 0, screenWidth, screenHeight);
 
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);
 
 	Shader bufferShader("shaders/bufferShader.vs", "shaders/bufferShader.frag");
 	Shader directLightShader("shaders/directLight.vs", "shaders/directLight.frag");
@@ -163,9 +162,9 @@ int main()
 #pragma region light sources setup
 
 	glm::vec3 dirLightDirection(-0.2f, -1.0f, -0.3f);
-	glm::vec3 dirLightAmbient = glm::vec3(0.01f, 0.01f, 0.01f);
-	glm::vec3 dirLightDiffuse = glm::vec3(0.1f, 0.1f, 0.1f);
-	glm::vec3 dirLightSpecular = glm::vec3(0.1f, 0.1f, 0.1f);
+	glm::vec3 dirLightAmbient = glm::vec3(0.05f, 0.05f, 0.05f);
+	glm::vec3 dirLightDiffuse = glm::vec3(0.2f, 0.2f, 0.2f);
+	glm::vec3 dirLightSpecular = glm::vec3(0.2f, 0.2f, 0.2f);
 
 	size_t lightsNumber = 10; //set number of light sources
 
@@ -288,6 +287,10 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 #pragma region directional light calculation
+		
+		glEnable(GL_BLEND);
+		glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_ONE, GL_ONE);
 
 		directLightShader.Use();
 
@@ -305,7 +308,7 @@ int main()
 
 		glUniform3fv(glGetUniformLocation(directLightShader.Program, "viewPos"), 1, glm::value_ptr(camera.Position));
 
-//		drawQuad();
+		drawQuad();
 
 #pragma endregion 
 
@@ -356,6 +359,8 @@ int main()
 #pragma region draw result
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glDisable(GL_BLEND);
+
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		resultShader.Use();
@@ -374,10 +379,10 @@ int main()
 	
 		drawQuad();
 
-
 #pragma endregion
 
 #pragma region draw spheres
+
 		if (drawSpheres)
 		{
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
